@@ -3,24 +3,41 @@ import { NooseHeader } from "@/components/NooseHeader";
 import { ColleagueProfile } from "@/components/ColleagueProfile";
 import { AccidentForm } from "@/components/AccidentForm";
 import { AccidentsList } from "@/components/AccidentsList";
+import { AgentManagement } from "@/components/AgentManagement";
+import { Navigation } from "@/components/Navigation";
+import { Palmarès } from "@/components/Palmares";
 
 const Index = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [currentView, setCurrentView] = useState<'home' | 'agents' | 'palmares'>('home');
 
   const handleAccidentAdded = () => {
     setRefreshTrigger(prev => prev + 1);
   };
 
+  const renderContent = () => {
+    switch (currentView) {
+      case 'agents':
+        return <AgentManagement />;
+      case 'palmares':
+        return <Palmarès onBack={() => setCurrentView('home')} />;
+      default:
+        return (
+          <>
+            <ColleagueProfile />
+            <AccidentForm onAccidentAdded={handleAccidentAdded} />
+            <AccidentsList refreshTrigger={refreshTrigger} />
+          </>
+        );
+    }
+  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-noose-light-blue/20">
       <NooseHeader />
       
       <main className="container mx-auto px-4 py-8 space-y-8">
-        <ColleagueProfile />
-        
-        <AccidentForm onAccidentAdded={handleAccidentAdded} />
-        
-        <AccidentsList refreshTrigger={refreshTrigger} />
+        <Navigation currentView={currentView} onViewChange={setCurrentView} />
+        {renderContent()}
       </main>
       
       {/* Footer */}
