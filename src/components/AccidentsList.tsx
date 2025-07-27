@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { Calendar, FileText, DollarSign, User, AlertTriangle } from "lucide-react";
+import { Calendar, FileText, DollarSign, User, AlertTriangle, Filter } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { AgentSelector } from "./AgentSelector";
 
 interface Accident {
   id: string;
@@ -11,26 +13,50 @@ interface Accident {
   cost: number;
   added_by: string;
   created_at: string;
+  agent_id: string | null;
+  agent?: {
+    name: string;
+    agent_number: number;
+  };
 }
 
 interface AccidentsListProps {
   refreshTrigger: number;
+  agentFilter?: string | null;
 }
 
-export const AccidentsList = ({ refreshTrigger }: AccidentsListProps) => {
+export const AccidentsList = ({ refreshTrigger, agentFilter }: AccidentsListProps) => {
   const [accidents, setAccidents] = useState<Accident[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterAgentId, setFilterAgentId] = useState<string | null>(agentFilter || null);
+  const [showFilter, setShowFilter] = useState(false);
 
   useEffect(() => {
     fetchAccidents();
-  }, [refreshTrigger]);
+  }, [refreshTrigger, filterAgentId]);
+
+  useEffect(() => {
+    if (agentFilter !== undefined) {
+      setFilterAgentId(agentFilter);
+    }
+  }, [agentFilter]);
 
   const fetchAccidents = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("noose_accidents")
-        .select("*")
+        .select(`
+          *,
+          agent:noose_agents(name, agent_number)
+        `)
         .order("date", { ascending: false });
+
+      // Appliquer le filtre par agent si sélectionné
+      if (filterAgentId) {
+        query = query.eq("agent_id", filterAgentId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setAccidents(data || []);
@@ -56,6 +82,11 @@ export const AccidentsList = ({ refreshTrigger }: AccidentsListProps) => {
     return "text-alert-red";
   };
 
+  const clearFilter = () => {
+    setFilterAgentId(null);
+    setShowFilter(false);
+  };
+
   if (loading) {
     return (
       <Card className="border-noose-blue/20 shadow-lg">
@@ -69,16 +100,59 @@ export const AccidentsList = ({ refreshTrigger }: AccidentsListProps) => {
   return (
     <Card className="border-noose-blue/20 shadow-lg">
       <CardHeader className="bg-gradient-to-r from-noose-blue/10 to-noose-accent/10">
-        <CardTitle className="flex items-center gap-2 text-noose-blue">
-          <AlertTriangle className="w-6 h-6" />
-          Journal des Incidents ({accidents.length})
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-noose-blue">
+            <AlertTriangle className="w-6 h-6" />
+            Journal des Incidents ({accidents.length})
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            {filterAgentId && (
+              <Button
+                onClick={clearFilter}
+                variant="outline"
+                size="sm"
+                className="text-xs"
+              >
+                Effacer filtre
+              </Button>
+            )}
+            <Button
+              onClick={() => setShowFilter(!showFilter)}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Filter className="w-4 h-4" />
+              Filtrer
+            </Button>
+          </div>
+        </div>
+        
+        {showFilter && (
+          <div className="mt-4 p-4 bg-background/50 rounded-lg border">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Filtrer par agent:</label>
+              <AgentSelector
+                selectedAgentId={filterAgentId}
+                onAgentSelect={(agentId) => {
+                  setFilterAgentId(agentId);
+                  setShowFilter(false);
+                }}
+              />
+            </div>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="p-6">
         {accidents.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <AlertTriangle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>Aucun accident enregistré pour le moment.</p>
+            <p>
+              {filterAgentId 
+                ? "Aucun accident trouvé pour cet agent." 
+                : "Aucun accident enregistré pour le moment."
+              }
+            </p>
             <p className="text-sm">C&apos;est un miracle !</p>
           </div>
         ) : (
@@ -98,6 +172,11 @@ export const AccidentsList = ({ refreshTrigger }: AccidentsListProps) => {
                         <Calendar className="w-4 h-4" />
                         {formatDate(accident.date)}
                       </div>
+                      {accident.agent && (
+                        <Badge variant="secondary" className="text-xs">
+                          {accident.agent.name} #{accident.agent.agent_number}
+                        </Badge>
+                      )}
                     </div>
                     
                     <div className="flex items-start gap-2 mb-2">

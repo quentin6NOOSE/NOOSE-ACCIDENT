@@ -7,12 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { AgentSelector } from "./AgentSelector";
 
 interface AccidentFormProps {
   onAccidentAdded: () => void;
+  preselectedAgentId?: string | null;
 }
 
-export const AccidentForm = ({ onAccidentAdded }: AccidentFormProps) => {
+export const AccidentForm = ({ onAccidentAdded, preselectedAgentId }: AccidentFormProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -22,7 +24,15 @@ export const AccidentForm = ({ onAccidentAdded }: AccidentFormProps) => {
     description: "",
     cost: "",
     added_by: "",
+    agent_id: preselectedAgentId || null,
   });
+
+  // Mettre à jour l'agent présélectionné si il change
+  useState(() => {
+    if (preselectedAgentId !== undefined) {
+      setFormData(prev => ({ ...prev, agent_id: preselectedAgentId }));
+    }
+  }, [preselectedAgentId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +52,7 @@ export const AccidentForm = ({ onAccidentAdded }: AccidentFormProps) => {
       const { error } = await supabase
         .from("noose_accidents")
         .insert({
+          agent_id: formData.agent_id || null,
           date: formData.date,
           description: formData.description,
           cost: parseFloat(formData.cost) || 0,
@@ -61,6 +72,7 @@ export const AccidentForm = ({ onAccidentAdded }: AccidentFormProps) => {
         description: "",
         cost: "",
         added_by: "",
+        agent_id: preselectedAgentId || null,
       });
 
       setIsOpen(false);
@@ -103,6 +115,17 @@ export const AccidentForm = ({ onAccidentAdded }: AccidentFormProps) => {
       </CardHeader>
       <CardContent className="p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <User className="w-4 h-4" />
+              Agent responsable
+            </Label>
+            <AgentSelector
+              selectedAgentId={formData.agent_id}
+              onAgentSelect={(agentId) => setFormData({ ...formData, agent_id: agentId })}
+            />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="date" className="flex items-center gap-2">

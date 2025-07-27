@@ -6,6 +6,8 @@ import { AccidentsList } from "@/components/AccidentsList";
 import { AgentManagement } from "@/components/AgentManagement";
 import { Navigation } from "@/components/Navigation";
 import { Palmarès } from "@/components/Palmares";
+import { DailyQuote } from "@/components/DailyQuote";
+import { CustomPopup } from "@/components/CustomPopup";
 
 const Index = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -24,6 +26,7 @@ const Index = () => {
       default:
         return (
           <>
+            <DailyQuote />
             <ColleagueProfile />
             <AccidentForm onAccidentAdded={handleAccidentAdded} />
             <AccidentsList refreshTrigger={refreshTrigger} />
@@ -34,6 +37,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-noose-light-blue/20">
       <NooseHeader />
+      <CustomPopup />
       
       <main className="container mx-auto px-4 py-8 space-y-8">
         <Navigation currentView={currentView} onViewChange={setCurrentView} />
